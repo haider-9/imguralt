@@ -1,18 +1,33 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const MONGODB_URI = 'mongodb+srv://haider:108663@cluster0.sbzs5ys.mongodb.net/imguralt?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI =
+  "mongodb+srv://haider:108663@cluster0.sbzs5ys.mongodb.net/imguralt?retryWrites=true&w=majority&appName=Cluster0";
 
-let isConnected = false;
+// Cache the connection promise so parallel requests don't each try to connect
+let connectionPromise: Promise<typeof mongoose> | null = null;
 
 export async function connectDB() {
-	if (isConnected) return;
+  // Already fully connected
+  if (mongoose.connection.readyState === 1) return;
 
-	try {
-		await mongoose.connect(MONGODB_URI);
-		isConnected = true;
-		console.log('MongoDB connected');
-	} catch (err) {
-		console.error('MongoDB connection error:', err);
-		throw err;
-	}
+  // A connection attempt is already in flight — wait for it
+  if (connectionPromise) {
+    await connectionPromise;
+    return;
+  }
+
+  connectionPromise = mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10_000,
+    socketTimeoutMS: 45_000,
+  });
+
+  try {
+    await connectionPromise;
+    console.log("✅ MongoDB connected");
+  } catch (err) {
+    // Reset so the next request can try again
+    connectionPromise = null;
+    console.error("❌ MongoDB connection error:", err);
+    throw err;
+  }
 }
