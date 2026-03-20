@@ -1,13 +1,10 @@
 <script lang="ts">
-	import './layout.css';
-	import favicon from '$lib/assets/favicon.svg';
-
-	let { children } = $props();
+  import './layout.css';
+  import { Toaster } from 'svelte-sonner';
+  
+  let { children } = $props();
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-</svelte:head>
-
 {@render children()}
+
+<Toaster richColors position="top-right" />

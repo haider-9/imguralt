@@ -4,14 +4,15 @@ import { connectDB } from "$lib/server/db";
 import { Video } from "$lib/server/models/video";
 import {
   getVideoUrl,
-  getGifUrl,
-  getThumbnailUrl,
+  getCloudinaryGifUrl,
   getCloudinaryWebpUrl,
+  getCloudinaryThumbnailUrl,
 } from "$lib/cloudinary";
-import { nanoid } from "nanoid";
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
+    const session = await locals.auth();
+    
     await connectDB();
 
     const body = await request.json();
@@ -39,23 +40,20 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ video: existing.toObject() }, { status: 200 });
     }
 
-    const shortId = nanoid(8);
-
     const video = await Video.create({
-      shortId,
       title: original_filename || "Untitled",
       publicId: public_id,
-      // Direct Cloudinary URL — used only in the <video> player (needs range requests)
       originalUrl: getVideoUrl(public_id),
-      // Branded custom URLs — these are what users see and share
-      gifUrl: getGifUrl(shortId),
+      gifUrl: getCloudinaryGifUrl(public_id),
       webpUrl: getCloudinaryWebpUrl(public_id),
-      thumbnailUrl: getThumbnailUrl(shortId),
+      thumbnailUrl: getCloudinaryThumbnailUrl(public_id),
       size: bytes || 0,
       duration: duration || 0,
       format: format || "mp4",
       width: width || 0,
       height: height || 0,
+      userId: session?.user?.id,
+      isPublic: true,
     });
 
     return json({ video: video.toObject() }, { status: 201 });

@@ -3,25 +3,57 @@ import type { RequestHandler } from './$types';
 import { connectDB } from '$lib/server/db';
 import { Video } from '$lib/server/models/video';
 
-export const GET: RequestHandler = async ({ params }) => {
-	try {
-		await connectDB();
+export const PATCH: RequestHandler = async ({ params, request, locals }) => {
+  try {
+    const session = await locals.auth();
+    
+    if (!session?.user) {
+      return json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-		const { id } = params;
+    await connectDB();
 
-		const video = await Video.findOneAndUpdate(
-			{ shortId: id },
-			{ $inc: { views: 1 } },
-			{ new: true, lean: true }
-		);
+    const { title } = await request.json();
 
-		if (!video) {
-			return json({ error: 'Video not found' }, { status: 404 });
-		}
+    const video = await Video.findOneAndUpdate(
+      { _id: params.id, userId: session.user.id },
+      { title },
+      { new: true }
+    );
 
-		return json({ video });
-	} catch (err) {
-		console.error('Failed to fetch video:', err);
-		return json({ error: 'Failed to fetch video' }, { status: 500 });
-	}
+    if (!video) {
+      return json({ error: 'Video not found' }, { status: 404 });
+    }
+
+    return json({ video: video.toObject() });
+  } catch (error) {
+    console.error('Update video error:', error);
+    return json({ error: 'Failed to update video' }, { status: 500 });
+  }
+};
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+  try {
+    const session = await locals.auth();
+    
+    if (!session?.user) {
+      return json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await connectDB();
+
+    const video = await Video.findOneAndDelete({
+      _id: params.id,
+      userId: session.user.id
+    });
+
+    if (!video) {
+      return json({ error: 'Video not found' }, { status: 404 });
+    }
+
+    return json({ message: 'Video deleted successfully' });
+  } catch (error) {
+    console.error('Delete video error:', error);
+    return json({ error: 'Failed to delete video' }, { status: 500 });
+  }
 };

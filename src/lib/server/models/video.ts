@@ -1,7 +1,6 @@
 import mongoose, { type Document, Schema } from "mongoose";
 
 export interface IVideo extends Document {
-  shortId: string;
   title: string;
   publicId: string;
   originalUrl: string;
@@ -15,16 +14,12 @@ export interface IVideo extends Document {
   height: number;
   uploadedAt: Date;
   views: number;
+  userId?: string;
+  isPublic: boolean;
 }
 
 const VideoSchema = new Schema<IVideo>(
   {
-    shortId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
     title: {
       type: String,
       default: "Untitled",
@@ -73,6 +68,15 @@ const VideoSchema = new Schema<IVideo>(
     views: {
       type: Number,
       default: 0,
+    },
+    userId: {
+      type: String,
+      ref: "User",
+      index: true,
+    },
+    isPublic: {
+      type: Boolean,
+      default: true,
     },
   },
   {

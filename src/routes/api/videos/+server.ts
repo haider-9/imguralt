@@ -4,29 +4,21 @@ import { connectDB } from '$lib/server/db';
 import { Video } from '$lib/server/models/video';
 
 export const GET: RequestHandler = async ({ url }) => {
-	try {
-		await connectDB();
+  try {
+    await connectDB();
 
-		const page = parseInt(url.searchParams.get('page') ?? '1');
-		const limit = parseInt(url.searchParams.get('limit') ?? '20');
-		const skip = (page - 1) * limit;
+    const limit = parseInt(url.searchParams.get('limit') || '24');
+    const skip = parseInt(url.searchParams.get('skip') || '0');
 
-		const [videos, total] = await Promise.all([
-			Video.find({}).sort({ uploadedAt: -1 }).skip(skip).limit(limit).lean(),
-			Video.countDocuments({})
-		]);
+    const videos = await Video.find({ isPublic: true })
+      .sort({ uploadedAt: -1 })
+      .limit(limit)
+      .skip(skip)
+      .lean();
 
-		return json({
-			videos,
-			pagination: {
-				page,
-				limit,
-				total,
-				pages: Math.ceil(total / limit)
-			}
-		});
-	} catch (err) {
-		console.error('Failed to fetch videos:', err);
-		return json({ error: 'Failed to fetch videos' }, { status: 500 });
-	}
+    return json({ videos });
+  } catch (error) {
+    console.error('Get videos error:', error);
+    return json({ error: 'Failed to fetch videos' }, { status: 500 });
+  }
 };
