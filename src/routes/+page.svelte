@@ -391,6 +391,9 @@
         <div class="text-center py-16 text-muted-foreground">
           <Film class="size-10 mx-auto mb-3 opacity-30" />
           <p>No videos yet. Upload one above!</p>
+          <p class="text-xs mt-2 opacity-60">
+            Note: Database connection required for persistent storage
+          </p>
         </div>
       {:else}
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
