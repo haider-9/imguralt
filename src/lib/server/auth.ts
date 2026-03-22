@@ -1,10 +1,12 @@
 import { SvelteKitAuth } from "@auth/sveltekit";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import { connectDB } from "./db";
+import { connectDBSafe } from "./db";
 import { User } from "./models/user";
 import bcrypt from "bcryptjs";
 import type { DefaultSession } from "@auth/core/types";
 import CredentialsProvider from "@auth/core/providers/credentials";
+import { MongoClient } from "mongodb";
+import { MONGODB_URI } from "$env/static/private";
 
 declare module "@auth/core/types" {
   interface Session {
@@ -14,8 +16,19 @@ declare module "@auth/core/types" {
   }
 }
 
+// Create MongoDB client for auth adapter with error handling
+let clientPromise: Promise<MongoClient>;
+try {
+  const client = new MongoClient(MONGODB_URI);
+  clientPromise = client.connect();
+} catch (error) {
+  console.error("Failed to create MongoDB client for auth:", error);
+  // Create a dummy promise that rejects
+  clientPromise = Promise.reject(new Error("MongoDB client creation failed"));
+}
+
 export const { handle, signIn, signOut } = SvelteKitAuth({
-  adapter: MongoDBAdapter(connectDB()),
+  adapter: MongoDBAdapter(clientPromise),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -29,7 +42,12 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         }
 
         try {
-          await connectDB();
+          const dbConnected = await connectDBSafe();
+          if (!dbConnected) {
+            console.warn("Database unavailable for authentication");
+            return null;
+          }
+
           const user = await User.findOne({ email: credentials.email });
 
           if (!user) {
@@ -49,7 +67,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
             image: user.avatar,
           };
         } catch (error) {
-          console.error("Auth database error:", error);
+          console.error("Auth database error:", error instanceof Error ? error.message : error);
           return null;
         }
       },
